@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useShoppingList, useProducts } from './hooks/useFirebase'
+import { useShoppingList, useCustomProducts } from './hooks/useFirebase'
 import { CATEGORIES, DEFAULT_PRODUCTS } from './data/products'
 import PedirView from './components/PedirView'
 import ComprarView from './components/ComprarView'
@@ -16,7 +16,15 @@ export default function App() {
   const [toast, setToast]             = useState('')
 
   const { items, loading, saveAllPending, toggleDone, clearAll } = useShoppingList()
-  const { products, loadingProducts, saveProduct, deleteProduct } = useProducts()
+  const { customProducts, saveProduct, deleteProduct } = useCustomProducts()
+
+  const products = {}
+  CATEGORIES.forEach(cat => {
+    products[cat.id] = [
+      ...(DEFAULT_PRODUCTS[cat.id] || []),
+      ...(customProducts[cat.id]   || []),
+    ]
+  })
 
   const cartCount  = Object.keys(pending).length
   const doneCount  = Object.values(items).filter(i => i.done).length
@@ -84,7 +92,7 @@ export default function App() {
       </div>
 
       <div className="content">
-        {loading || loadingProducts ? (
+        {loading ? (
           <div className="loading">
             <div className="loading-spinner" />
             <p>Cargando...</p>
