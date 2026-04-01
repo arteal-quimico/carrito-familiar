@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import {
-  collection, doc, onSnapshot,
-  setDoc, deleteDoc, writeBatch, getDocs
+import { 
+  collection, doc, onSnapshot, 
+  setDoc, deleteDoc, writeBatch, getDocs 
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
@@ -9,9 +9,11 @@ import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
 const LIST_COL      = 'lista'
 const PRODUCTS_COL  = 'productos'
 
+// Inicializa productos por defecto si la base está vacía 
 async function initProducts() {
   const snap = await getDocs(collection(db, PRODUCTS_COL))
   if (!snap.empty) return
+  
   const batch = writeBatch(db)
   CATEGORIES.forEach(cat => {
     const prods = DEFAULT_PRODUCTS[cat.id] || []
@@ -75,10 +77,14 @@ export function useShoppingList() {
     return unsub
   }, [])
 
+  // Guarda todos los productos seleccionados en un solo proceso (Batch) 
   const saveAllPending = async (pendingItems) => {
     const batch = writeBatch(db)
+    
     for (const [key, item] of Object.entries(pendingItems)) {
       const existing = items[key]
+      
+      // Si el producto ya estaba en la lista, sumamos las cantidades 
       if (existing && (existing.confirmedQty || 0) > 0) {
         batch.set(doc(db, LIST_COL, key), {
           ...existing,
@@ -87,6 +93,7 @@ export function useShoppingList() {
           done: false,
         }, { merge: true })
       } else {
+        // Si es nuevo, lo creamos desde cero 
         batch.set(doc(db, LIST_COL, key), {
           ...item,
           confirmedQty: item.pendingQty,
