@@ -3,12 +3,13 @@ import { CATEGORIES, UNITS } from '../data/products'
 
 export default function PedirView({ products, items, addItem, updateItem, onOpenCreate }) {
   const [selectedCat, setSelectedCat] = useState('lacteos')
+  const [localQty, setLocalQty] = useState({})
 
   const getItemKey = (catId, productId) => `${catId}_${productId}`
 
   const getQty = (catId, productId) => {
     const key = getItemKey(catId, productId)
-    return items[key]?.qty || 0
+    return localQty[key] || 0
   }
 
   const changeQty = async (catId, product, delta) => {
@@ -16,10 +17,13 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
     const currentQty = getQty(catId, product.id)
     const newQty = Math.max(0, currentQty + delta)
 
+    setLocalQty(prev => ({ ...prev, [key]: newQty }))
+
     if (newQty === 0) {
-      // Remove from list
-      const { removeItem } = await import('../hooks/useFirebase')
-    } else if (currentQty === 0) {
+      if (items[key] && (items[key].confirmedQty || 0) === 0) {
+        const { removeItem } = await import('../hooks/useFirebase')
+      }
+    } else if (!items[key]) {
       await addItem(key, {
         productId: product.id,
         catId,
@@ -27,9 +31,11 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
         emoji: product.emoji,
         unit: product.unit,
         qty: newQty,
+        pendingQty: newQty,
+        confirmedQty: 0,
       })
     } else {
-      await updateItem(key, { qty: newQty })
+      await updateItem(key, { pendingQty: newQty })
     }
   }
 
@@ -38,7 +44,6 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
 
   return (
     <div className="pedir-view">
-      {/* Category selector */}
       <div className="section-label">Categorías</div>
       <div className="categories-scroll">
         {CATEGORIES.map(cat => (
@@ -53,10 +58,10 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
         ))}
       </div>
 
-      {/* Products grid */}
       <div className="section-label">{currentCat?.name}</div>
       <div className="products-grid">
         {prods.map(product => {
+          const key = getItemKey(selectedCat, product.id)
           const qty = getQty(selectedCat, product.id)
           const isAdded = qty > 0
           const unitLabel = UNITS.find(u => u.id === product.unit)?.label || product.unit
@@ -89,7 +94,6 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
           )
         })}
 
-        {/* Create product card */}
         <button className="product-card create-card" onClick={onOpenCreate}>
           <span className="product-emoji">➕</span>
           <div className="product-name">Crear producto</div>
