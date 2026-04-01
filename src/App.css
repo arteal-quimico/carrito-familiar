@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
-/* ── Reset & Base ─────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   --green:       #388E3C;
@@ -22,7 +21,6 @@ html, body, #root {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── App Shell ────────────────────────────────── */
 .app {
   max-width: 430px;
   margin: 0 auto;
@@ -33,7 +31,6 @@ html, body, #root {
   position: relative;
 }
 
-/* ── Header ───────────────────────────────────── */
 .header {
   background: var(--green);
   padding: 14px 16px 16px;
@@ -91,14 +88,12 @@ html, body, #root {
   color: var(--green-text);
 }
 
-/* ── Content ──────────────────────────────────── */
 .content {
   flex: 1;
-  padding: 12px 12px 90px;
+  padding: 12px 12px 100px;
   overflow-y: auto;
 }
 
-/* ── Section Labels ───────────────────────────── */
 .section-label {
   font-size: 11px;
   font-weight: 700;
@@ -108,7 +103,6 @@ html, body, #root {
   margin: 10px 0 6px;
 }
 
-/* ── Category Pills ───────────────────────────── */
 .categories-scroll {
   display: flex;
   gap: 8px;
@@ -143,7 +137,6 @@ html, body, #root {
 .cat-pill-name { font-size: 9px; font-weight: 700; color: #777; }
 .cat-pill.selected .cat-pill-name { color: var(--green-text); }
 
-/* ── Products Grid ────────────────────────────── */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -185,7 +178,6 @@ html, body, #root {
 .product-unit  { font-size: 9px; color: #999; background: #f5f5f5; border-radius: 6px; padding: 1px 6px; margin-bottom: 5px; }
 .product-card.added .product-unit { background: #C8E6C9; color: var(--green-text); }
 
-/* ── Qty Controls ─────────────────────────────── */
 .qty-controls {
   display: flex;
   align-items: center;
@@ -213,30 +205,6 @@ html, body, #root {
 
 .qty-value { font-size: 14px; font-weight: 800; color: var(--green-text); min-width: 18px; text-align: center; }
 
-/* ── FAB ──────────────────────────────────────── */
-.fab {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 390px;
-  width: calc(100% - 32px);
-  background: var(--green);
-  color: white;
-  border: none;
-  border-radius: 28px;
-  padding: 16px 24px;
-  font-size: 15px;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(56,142,60,0.4);
-  z-index: 10;
-  transition: transform 0.15s;
-}
-.fab:active { transform: translateX(-50%) scale(0.97); }
-
-/* ── Shopping List ────────────────────────────── */
 .comprar-view { display: flex; flex-direction: column; gap: 0; }
 
 .progress-header {
@@ -306,7 +274,6 @@ html, body, #root {
 }
 .check-circle.checked { background: var(--green-light); border-color: var(--green-light); }
 
-/* ── All Done / Empty ─────────────────────────── */
 .all-done, .empty-state {
   text-align: center;
   padding: 3rem 1rem;
@@ -357,7 +324,6 @@ html, body, #root {
   width: 100%;
 }
 
-/* ── Loading ──────────────────────────────────── */
 .loading {
   display: flex;
   flex-direction: column;
@@ -378,7 +344,6 @@ html, body, #root {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Modal ────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -550,10 +515,7 @@ html, body, #root {
 .ticker-inner.visible { opacity: 1; }
 .ticker-inner.hidden  { opacity: 0; }
 
-.ticker-icon {
-  font-size: 14px;
-  flex-shrink: 0;
-}
+.ticker-icon { font-size: 14px; flex-shrink: 0; }
 
 .ticker-text {
   font-size: 11px;
@@ -563,7 +525,26 @@ html, body, #root {
   font-family: 'Nunito', sans-serif;
 }
 
-/* Asegura que el contenido no quede tapado por el ticker */
-.content {
-  padding-bottom: 100px !important;
+/* ── Save Button ──────────────────────────────── */
+.save-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.save-btn:active { transform: scale(0.9); }
+.save-btn.disabled { opacity: 0.35; cursor: default; }
+.save-btn.saved {
+  background: white;
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 800;
 }
