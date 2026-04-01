@@ -224,9 +224,4 @@ export const DEFAULT_PRODUCTS = {
     { id: 'yogur_cereal',   emoji: '🥣', name: 'Yogur con cereal', unit: 'u' },
   ],
 }
-```
 
-Pega esto en GitHub, guarda con **Commit changes** y luego en el CMD:
-```
-npm run build
-firebase deploy --only hosting
