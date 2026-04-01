@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { CATEGORIES, UNITS } from '../data/products'
 
 const EMOJI_GALLERY = {
@@ -6,7 +6,7 @@ const EMOJI_GALLERY = {
   'Frutas': ['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍑','🥭','🍍','🥥','🍒','🍐','🍏'],
   'Verduras': ['🥦','🥕','🧅','🍅','🥬','🥔','🌽','🌶️','🫑','🥒','🧄','🫛','🍆','🥑','🫚'],
   'Proteínas': ['🥩','🍗','🐟','🥓','🫘','🐠','🍖','🦐','🦑','🦞','🥚','🍣','🍤'],
-  'Carbohidratos': ['🥖','🍚','🍝','🥣','🌽','🥐','🍞','🥨','🧇','🥞','🫓'],
+  'Carbohidratos': ['🥖','🍚','🍝','🥣','🌽','🥐','🍞','🥨',' waffle','🥞','🫓'],
   'Bebidas': ['🧃','🥤','☕','🫖','🧋','🍵','🥛'],
   'Limpieza': ['🧴','🪥','🧻','🧼','🫧','🌸','🪣','🧹','🧺','🪒'],
   'Snacks': ['🍬','🍫','🍭','🍿','🥜','🍪','🎂','🍰','🧁'],
@@ -19,82 +19,34 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
   const [emoji, setEmoji]             = useState(editProduct?.emoji || '🛒')
   const [unit, setUnit]               = useState(editProduct?.unit || 'u')
   const [category, setCategory]       = useState(editProduct?.category || 'lacteos')
-  const [aiHint, setAiHint]           = useState('')
-  const [aiLoading, setAiLoading]     = useState(false)
   const [activeTab, setActiveTab]     = useState('galeria')
   const [customEmoji, setCustomEmoji] = useState(editProduct?.emoji || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [toast, setToast]             = useState('')
-  const timerRef = useRef(null)
-
-  const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 2000)
-  }
-
-  const handleNameChange = (val) => {
-    setName(val)
-    clearTimeout(timerRef.current)
-    if (val.length >= 3) {
-      setAiLoading(true)
-      timerRef.current = setTimeout(() => suggestEmoji(val), 1000)
-    } else {
-      setAiHint('')
-      setAiLoading(false)
-    }
-  }
-
-  const suggestEmoji = async (productName) => {
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 5000)
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 10,
-          messages: [{ role: 'user', content: `Responde SOLO con un único emoji para este producto de supermercado: "${productName}". Solo el emoji.` }]
-        })
-      })
-      clearTimeout(timeout)
-      const data = await res.json()
-      const suggested = data.content?.[0]?.text?.trim() || ''
-      if (suggested) {
-        setEmoji(suggested)
-        setCustomEmoji(suggested)
-        setAiHint(`✨ IA sugiere: ${suggested}`)
-      }
-    } catch { setAiHint('') }
-    finally { setAiLoading(false) }
-  }
-
-  const handleCustomEmojiChange = (val) => {
-    setCustomEmoji(val)
-    const chars = [...val]
-    if (chars.length > 0) setEmoji(chars[0])
-  }
 
   const handleSave = async () => {
     if (!name.trim()) return
     const id = editProduct?.id || `${category}_custom_${Date.now()}`
+    
     await onSave({ id, name: name.trim(), emoji, unit, category, custom: true })
-    showToast(isEdit ? '✓ Producto actualizado' : '✓ Producto creado')
-    setTimeout(() => onClose(), 800)
+    
+    setToast(isEdit ? '✅ ¡Cambios guardados!' : '✅ ¡Producto creado!')
+    setTimeout(() => onClose(), 1000) // Cierre automático tras 1 seg
   }
 
   const handleDelete = async () => {
-    if (!confirmDelete) { setConfirmDelete(true); return }
+    if (!confirmDelete) { 
+      setConfirmDelete(true)
+      return 
+    }
     await onDelete(editProduct.id)
-    showToast('🗑️ Producto eliminado')
-    setTimeout(() => onClose(), 800)
+    setToast('🗑️ Producto eliminado')
+    setTimeout(() => onClose(), 1000) // Cierre automático tras 1 seg
   }
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-
         {toast && <div className="toast">{toast}</div>}
 
         <div className="modal-header">
@@ -102,83 +54,52 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        <label className="field-label">Nombre</label>
+        <label className="field-label">Nombre del producto</label>
         <input
           className="field-input"
           placeholder="Ej: Aceite de oliva"
           value={name}
-          onChange={e => handleNameChange(e.target.value)}
+          onChange={e => setName(e.target.value)}
           autoFocus
         />
-        {aiLoading && <div className="ai-hint loading">✨ Buscando ícono...</div>}
-        {aiHint && !aiLoading && <div className="ai-hint">{aiHint}</div>}
 
-        <label className="field-label">Ícono seleccionado</label>
-        <div className="emoji-selected">{emoji}</div>
-
+        <label className="field-label">Ícono: {emoji}</label>
         <div className="emoji-tabs">
           <button className={`emoji-tab ${activeTab === 'galeria' ? 'active' : ''}`} onClick={() => setActiveTab('galeria')}>Galería</button>
-          <button className={`emoji-tab ${activeTab === 'pegar' ? 'active' : ''}`} onClick={() => setActiveTab('pegar')}>Pegar emoji</button>
+          <button className={`emoji-tab ${activeTab === 'pegar' ? 'active' : ''}`} onClick={() => setActiveTab('pegar')}>Pegar Emoji</button>
         </div>
 
-        {activeTab === 'galeria' && (
+        {activeTab === 'galeria' ? (
           <div className="emoji-gallery">
             {Object.entries(EMOJI_GALLERY).map(([grupo, emojis]) => (
               <div key={grupo}>
                 <div className="emoji-group-label">{grupo}</div>
                 <div className="emoji-grid">
                   {emojis.map(em => (
-                    <button
-                      key={em}
-                      className={`emoji-opt ${emoji === em ? 'selected' : ''}`}
-                      onClick={() => { setEmoji(em); setCustomEmoji(em) }}
-                    >
-                      {em}
-                    </button>
+                    <button key={em} className={`emoji-opt ${emoji === em ? 'selected' : ''}`} onClick={() => setEmoji(em)}>{em}</button>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-        )}
-
-        {activeTab === 'pegar' && (
-          <div style={{ marginTop: '8px' }}>
-            <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-              Copia cualquier emoji y pégalo aquí:
-            </p>
-            <input
-              className="field-input"
-              placeholder="Pega tu emoji aquí 👉"
-              value={customEmoji}
-              onChange={e => handleCustomEmojiChange(e.target.value)}
-              style={{ fontSize: '24px', textAlign: 'center' }}
-            />
-          </div>
+        ) : (
+          <input
+            className="field-input"
+            placeholder="Pega un emoji aquí"
+            value={customEmoji}
+            onChange={e => {
+              setCustomEmoji(e.target.value)
+              if ([...e.target.value].length > 0) setEmoji([...e.target.value][0])
+            }}
+            style={{ fontSize: '24px', textAlign: 'center', marginTop: '10px' }}
+          />
         )}
 
         <label className="field-label">Categoría</label>
         <div className="options-row">
           {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              className={`option-pill ${category === cat.id ? 'selected' : ''}`}
-              onClick={() => setCategory(cat.id)}
-            >
+            <button key={cat.id} className={`option-pill ${category === cat.id ? 'selected' : ''}`} onClick={() => setCategory(cat.id)}>
               {cat.icon} {cat.name}
-            </button>
-          ))}
-        </div>
-
-        <label className="field-label">Unidad</label>
-        <div className="options-row">
-          {UNITS.map(u => (
-            <button
-              key={u.id}
-              className={`option-pill ${unit === u.id ? 'selected' : ''}`}
-              onClick={() => setUnit(u.id)}
-            >
-              {u.id === 'cubeta' ? '🥚 ' : ''}{u.label}
             </button>
           ))}
         </div>
@@ -186,16 +107,13 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
         <div className="modal-actions">
           <button className="btn-cancel" onClick={onClose}>Cancelar</button>
           <button className="btn-save" onClick={handleSave} disabled={!name.trim()}>
-            {isEdit ? 'Guardar cambios' : 'Crear producto'}
+            {isEdit ? 'Actualizar' : 'Crear Producto'}
           </button>
         </div>
 
         {isEdit && (
-          <button
-            className={`btn-delete ${confirmDelete ? 'confirm' : ''}`}
-            onClick={handleDelete}
-          >
-            {confirmDelete ? '⚠️ Toca de nuevo para confirmar' : '🗑️ Eliminar producto'}
+          <button className={`btn-delete ${confirmDelete ? 'confirm' : ''}`} onClick={handleDelete}>
+            {confirmDelete ? '⚠️ Confirmar eliminación' : '🗑️ Eliminar de la base'}
           </button>
         )}
       </div>
