@@ -11,7 +11,7 @@ export default function App() {
   const [mode, setMode] = useState('pedir')
   const [showCreate, setShowCreate] = useState(false)
   const [saved, setSaved] = useState(false)
-  const { items, loading, addItem, updateItem, toggleDone, clearAll } = useShoppingList()
+  const { items, loading, addItem, updateItem, removeItem, toggleDone, clearAll } = useShoppingList()
   const { customProducts, addCustomProduct } = useCustomProducts()
 
   const allProducts = {}
@@ -22,11 +22,37 @@ export default function App() {
     ]
   })
 
-  const cartCount = Object.keys(items).length
+  const cartCount = Object.keys(items).filter(k => (items[k].pendingQty || 0) > 0).length
   const doneCount = Object.values(items).filter(i => i.done).length
+  const totalCount = Object.keys(items).length
 
- const handleSave = () => {
+  const handleSave = async () => {
     if (cartCount === 0) return
+
+    // Por cada producto en el pedido pendiente
+    const pendingKeys = Object.keys(items).filter(k => (items[k].pendingQty || 0) > 0)
+
+    for (const key of pendingKeys) {
+      const item = items[key]
+      const newQty = item.pendingQty || 0
+
+      if (item.confirmedQty > 0) {
+        // Ya existe en lista — sumar cantidad
+        await updateItem(key, {
+          confirmedQty: (item.confirmedQty || 0) + newQty,
+          pendingQty: 0,
+          done: false,
+        })
+      } else {
+        // Nuevo en lista — confirmar
+        await updateItem(key, {
+          confirmedQty: newQty,
+          pendingQty: 0,
+          done: false,
+        })
+      }
+    }
+
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
@@ -37,8 +63,8 @@ export default function App() {
       <div className="header">
         <div className="header-top">
           <span className="header-title">🛒 Carrito Familiar</span>
-          {mode === 'comprar' && cartCount > 0 && (
-            <span className="header-badge">{doneCount}/{cartCount}</span>
+          {mode === 'comprar' && totalCount > 0 && (
+            <span className="header-badge">{doneCount}/{totalCount}</span>
           )}
         </div>
         <div className="mode-toggle">
@@ -82,7 +108,6 @@ export default function App() {
         )}
       </div>
 
-      {/* Botón guardar flotante — solo en modo pedir y con productos */}
       {mode === 'pedir' && cartCount > 0 && (
         <button
           className={`fab-save ${saved ? 'saved' : ''}`}
@@ -92,7 +117,6 @@ export default function App() {
         </button>
       )}
 
-      {/* Frase financiera siempre abajo de todo */}
       <FinancialTicker />
 
       {showCreate && (
