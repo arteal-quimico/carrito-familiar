@@ -10,6 +10,7 @@ import './App.css'
 export default function App() {
   const [mode, setMode] = useState('pedir')
   const [showCreate, setShowCreate] = useState(false)
+  const [saved, setSaved] = useState(false)
   const { items, loading, addItem, updateItem, toggleDone, clearAll } = useShoppingList()
   const { customProducts, addCustomProduct } = useCustomProducts()
 
@@ -24,15 +25,33 @@ export default function App() {
   const cartCount = Object.keys(items).length
   const doneCount = Object.values(items).filter(i => i.done).length
 
+  const handleSave = () => {
+    if (cartCount === 0) return
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    setMode('comprar')
+  }
+
   return (
     <div className="app">
-
       <div className="header">
         <div className="header-top">
           <span className="header-title">🛒 Carrito Familiar</span>
-          {mode === 'comprar' && cartCount > 0 && (
-            <span className="header-badge">{doneCount}/{cartCount}</span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {mode === 'comprar' && cartCount > 0 && (
+              <span className="header-badge">{doneCount}/{cartCount}</span>
+            )}
+            {mode === 'pedir' && (
+              <button
+                className={`save-btn ${cartCount === 0 ? 'disabled' : ''} ${saved ? 'saved' : ''}`}
+                onClick={handleSave}
+                disabled={cartCount === 0}
+                title="Guardar lista"
+              >
+                {saved ? '✓' : '💾'}
+              </button>
+            )}
+          </div>
         </div>
         <div className="mode-toggle">
           <button
@@ -74,12 +93,6 @@ export default function App() {
           />
         )}
       </div>
-
-      {mode === 'pedir' && cartCount > 0 && (
-        <button className="fab" onClick={() => setMode('comprar')}>
-          🛒 {cartCount} producto{cartCount > 1 ? 's' : ''} — Ir a comprar
-        </button>
-      )}
 
       <FinancialTicker />
 
