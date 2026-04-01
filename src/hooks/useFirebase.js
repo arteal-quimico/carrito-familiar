@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { 
   collection, doc, onSnapshot, 
-  setDoc, deleteDoc, writeBatch, query, orderBy 
+  setDoc, deleteDoc, writeBatch, query, orderBy,
+  increment, serverTimestamp 
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
@@ -9,6 +10,7 @@ import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
 const LIST_COL      = 'lista'
 const PRODUCTS_COL  = 'productos'
 
+// Poblado inicial ultra-rápido
 async function seedDatabase() {
   const batch = writeBatch(db)
   CATEGORIES.forEach(cat => {
@@ -32,10 +34,7 @@ export function useProducts() {
     
     const unsub = onSnapshot(q, (snap) => {
       if (snap.empty) {
-        // Si está vacío, poblamos la base
-        seedDatabase()
-        // IMPORTANTE: Quitamos el loading para que no se quede en blanco
-        setLoadingProducts(false) 
+        seedDatabase().finally(() => setLoadingProducts(false))
       } else {
         const data = {}
         snap.forEach(d => {
@@ -48,10 +47,9 @@ export function useProducts() {
         setLoadingProducts(false)
       }
     }, (error) => {
-      console.error("Error en Firebase:", error)
+      console.error("Error en productos:", error)
       setLoadingProducts(false)
     })
-
     return unsub
   }, [])
 
@@ -81,30 +79,46 @@ export function useShoppingList() {
       setItems(data)
       setLoading(false)
     }, (error) => {
+      console.error("Error en lista:", error)
       setLoading(false)
     })
     return unsub
   }, [])
 
+  /**
+   * REFACTOR: Gestión de items mejorada
+   * 1. Usa increment() para evitar errores de suma si varios usuarios guardan.
+   * 2. Limpia los datos locales antes de enviarlos a la nube.
+   * 3. Registra la fecha exacta del servidor.
+   */
   const saveAllPending = async (pendingItems) => {
     const batch = writeBatch(db)
-    for (const [key, item] of Object.entries(pendingItems)) {
+    
+    Object.entries(pendingItems).forEach(([key, item]) => {
       const docRef = doc(db, LIST_COL, key)
+      
+      // Extraemos solo lo necesario para la base de datos
+      const { pendingQty, ...productData } = item
+
       batch.set(docRef, {
-        ...item,
-        confirmedQty: (items[key]?.confirmedQty || 0) + item.pendingQty,
-        pendingQty: 0,
+        ...productData,
+        confirmedQty: increment(pendingQty), // Suma atómica en Firebase
         done: false,
-        addedAt: Date.now(),
+        updatedAt: serverTimestamp(), // Fecha exacta del servidor
+        addedAt: items[key]?.addedAt || Date.now() // Mantiene fecha original si existe
       }, { merge: true })
-    }
+    })
+
     await batch.commit()
   }
 
   const toggleDone = async (key) => {
     const current = items[key]
     if (!current) return
-    await setDoc(doc(db, LIST_COL, key), { done: !current.done }, { merge: true })
+    await setDoc(doc(db, LIST_COL, key), { 
+      done: !current.done,
+      updatedAt: serverTimestamp() 
+    }, { merge: true })
   }
 
   const clearAll = async () => {
