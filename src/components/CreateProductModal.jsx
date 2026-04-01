@@ -7,10 +7,10 @@ const EMOJI_GALLERY = {
   'Verduras': ['🥦','🥕','🧅','🍅','🥬','🥔','🌽','🌶️','🫑','🥒','🧄','🫛','🍆','🥑','🫚'],
   'Proteínas': ['🥩','🍗','🐟','🥓','🫘','🐠','🍖','🦐','🦑','🦞','🥚','🍣','🍤'],
   'Carbohidratos': ['🥖','🍚','🍝','🥣','🌽','🥐','🍞','🥨','🧇','🥞','🫓','🍘','🍙'],
-  'Bebidas': ['🧃','🥤','☕','🫖','🧋','🍵','🧉','🍺','🥛','🍷'],
+  'Bebidas': ['🧃','🥤','☕','🫖','🧋','🍵','🧉','🥛'],
   'Limpieza': ['🧴','🪥','🧻','🧼','🫧','🌸','🪣','🧹','🧺','🪒'],
-  'Snacks': ['🍬','🍫','🍭','🍿','🥜','🫙','🍪','🎂','🍰','🧁'],
-  'Otros': ['🛒','🫙','🥫','🍶','🧂','🌿','🪴','🐄','🐓','🐖'],
+  'Snacks': ['🍬','🍫','🍭','🍿','🥜','🍪','🎂','🍰','🧁'],
+  'Otros': ['🛒','🫙','🥫','🧂','🌿','🪴','🐄','🐓','🐖'],
 }
 
 export default function CreateProductModal({ onClose, onSave, onDelete, editProduct }) {
@@ -21,7 +21,6 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
   const [category, setCategory] = useState(editProduct?.category || 'lacteos')
   const [aiHint, setAiHint] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('galeria')
   const [customEmoji, setCustomEmoji] = useState(editProduct?.emoji || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -33,7 +32,7 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
     if (val.length >= 3) {
       setAiLoading(true)
       setAiHint('')
-      timerRef.current = setTimeout(() => suggestEmoji(val), 800)
+      timerRef.current = setTimeout(() => suggestEmoji(val), 1000)
     } else {
       setAiHint('')
       setAiLoading(false)
@@ -42,9 +41,12 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
 
   const suggestEmoji = async (productName) => {
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 10,
@@ -54,11 +56,14 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           }]
         })
       })
+      clearTimeout(timeout)
       const data = await res.json()
-      const suggested = data.content?.[0]?.text?.trim() || '🛍️'
-      setEmoji(suggested)
-      setCustomEmoji(suggested)
-      setAiHint(`✨ IA sugiere: ${suggested}`)
+      const suggested = data.content?.[0]?.text?.trim() || ''
+      if (suggested) {
+        setEmoji(suggested)
+        setCustomEmoji(suggested)
+        setAiHint(`✨ IA sugiere: ${suggested} — toca para usar`)
+      }
     } catch {
       setAiHint('')
     } finally {
@@ -74,7 +79,6 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
 
   const handleSave = async () => {
     if (!name.trim()) return
-    setSaving(true)
     await onSave({
       id: editProduct?.id || `custom_${Date.now()}`,
       name: name.trim(),
@@ -82,7 +86,6 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
       unit,
       category,
     })
-    setSaving(false)
     onClose()
   }
 
@@ -100,7 +103,6 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Nombre */}
         <label className="field-label">Nombre del producto</label>
         <input
           className="field-input"
@@ -109,27 +111,19 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           onChange={e => handleNameChange(e.target.value)}
           autoFocus
         />
-        {aiLoading && <div className="ai-hint loading">✨ La IA está sugiriendo un ícono...</div>}
-        {aiHint && !aiLoading && <div className="ai-hint">{aiHint}</div>}
+        {aiLoading && <div className="ai-hint loading">✨ Buscando ícono sugerido...</div>}
+        {aiHint && !aiLoading && (
+          <div className="ai-hint" onClick={() => { setEmoji([...aiHint][aiHint.indexOf(':')+2]); }}>
+            {aiHint}
+          </div>
+        )}
 
-        {/* Ícono */}
         <label className="field-label">Ícono seleccionado</label>
         <div className="emoji-selected">{emoji}</div>
 
-        {/* Tabs */}
         <div className="emoji-tabs">
-          <button
-            className={`emoji-tab ${activeTab === 'galeria' ? 'active' : ''}`}
-            onClick={() => setActiveTab('galeria')}
-          >
-            Galería
-          </button>
-          <button
-            className={`emoji-tab ${activeTab === 'pegar' ? 'active' : ''}`}
-            onClick={() => setActiveTab('pegar')}
-          >
-            Pegar emoji
-          </button>
+          <button className={`emoji-tab ${activeTab === 'galeria' ? 'active' : ''}`} onClick={() => setActiveTab('galeria')}>Galería</button>
+          <button className={`emoji-tab ${activeTab === 'pegar' ? 'active' : ''}`} onClick={() => setActiveTab('pegar')}>Pegar emoji</button>
         </div>
 
         {activeTab === 'galeria' && (
@@ -168,7 +162,6 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           </div>
         )}
 
-        {/* Categoría */}
         <label className="field-label">Categoría</label>
         <div className="options-row">
           {CATEGORIES.map(cat => (
@@ -182,7 +175,6 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           ))}
         </div>
 
-        {/* Unidad */}
         <label className="field-label">Unidad de medida</label>
         <div className="options-row">
           {UNITS.map(u => (
@@ -196,25 +188,23 @@ export default function CreateProductModal({ onClose, onSave, onDelete, editProd
           ))}
         </div>
 
-        {/* Botones */}
         <div className="modal-actions">
           <button className="btn-cancel" onClick={onClose}>Cancelar</button>
           <button
             className="btn-save"
             onClick={handleSave}
-            disabled={!name.trim() || saving}
+            disabled={!name.trim()}
           >
-            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear producto'}
+            {isEdit ? 'Guardar cambios' : 'Crear producto'}
           </button>
         </div>
 
-        {/* Borrar */}
         {isEdit && (
           <button
             className={`btn-delete ${confirmDelete ? 'confirm' : ''}`}
             onClick={handleDelete}
           >
-            {confirmDelete ? '⚠️ Toca de nuevo para confirmar borrado' : '🗑️ Borrar producto'}
+            {confirmDelete ? '⚠️ Toca de nuevo para confirmar' : '🗑️ Borrar producto'}
           </button>
         )}
       </div>
