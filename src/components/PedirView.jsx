@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { CATEGORIES, UNITS } from '../data/products'
+import CreateProductModal from './CreateProductModal'
 
-export default function PedirView({ products, items, addItem, updateItem, onOpenCreate }) {
+export default function PedirView({ products, items, addItem, updateItem, onOpenCreate, onEditProduct, onDeleteProduct }) {
   const [selectedCat, setSelectedCat] = useState('lacteos')
   const [localQty, setLocalQty] = useState({})
+  const [editingProduct, setEditingProduct] = useState(null)
 
   const getItemKey = (catId, productId) => `${catId}_${productId}`
 
@@ -16,12 +18,11 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
     const key = getItemKey(catId, product.id)
     const currentQty = getQty(catId, product.id)
     const newQty = Math.max(0, currentQty + delta)
-
     setLocalQty(prev => ({ ...prev, [key]: newQty }))
 
     if (newQty === 0) {
       if (items[key] && (items[key].confirmedQty || 0) === 0) {
-        const { removeItem } = await import('../hooks/useFirebase')
+        await updateItem(key, { pendingQty: 0 })
       }
     } else if (!items[key]) {
       await addItem(key, {
@@ -61,16 +62,20 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
       <div className="section-label">{currentCat?.name}</div>
       <div className="products-grid">
         {prods.map(product => {
-          const key = getItemKey(selectedCat, product.id)
           const qty = getQty(selectedCat, product.id)
           const isAdded = qty > 0
           const unitLabel = UNITS.find(u => u.id === product.unit)?.label || product.unit
 
           return (
-            <div
-              key={product.id}
-              className={`product-card ${isAdded ? 'added' : ''}`}
-            >
+            <div key={product.id} className={`product-card ${isAdded ? 'added' : ''}`}>
+              {/* Botón editar */}
+              <button
+                className="edit-btn"
+                onClick={e => { e.stopPropagation(); setEditingProduct({ ...product, category: selectedCat }) }}
+              >
+                ✏️
+              </button>
+
               <span className="product-emoji">{product.emoji}</span>
               <div className="product-name">{product.name}</div>
               <div className="product-unit">{unitLabel}</div>
@@ -99,6 +104,22 @@ export default function PedirView({ products, items, addItem, updateItem, onOpen
           <div className="product-name">Crear producto</div>
         </button>
       </div>
+
+      {/* Modal editar */}
+      {editingProduct && (
+        <CreateProductModal
+          editProduct={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSave={async (updated) => {
+            await onEditProduct(updated)
+            setEditingProduct(null)
+          }}
+          onDelete={async (product) => {
+            await onDeleteProduct(product)
+            setEditingProduct(null)
+          }}
+        />
+      )}
     </div>
   )
 }
