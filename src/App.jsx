@@ -25,11 +25,10 @@ export default function App() {
   const cartCount = Object.keys(items).length
   const doneCount = Object.values(items).filter(i => i.done).length
 
-  const handleSave = () => {
+ const handleSave = () => {
     if (cartCount === 0) return
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-    setMode('comprar')
+    setTimeout(() => setSaved(false), 2500)
   }
 
   return (
