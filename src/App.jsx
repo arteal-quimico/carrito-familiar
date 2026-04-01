@@ -34,24 +34,13 @@ export default function App() {
 
   return (
     <div className="app">
+
       <div className="header">
         <div className="header-top">
           <span className="header-title">🛒 Carrito Familiar</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {mode === 'comprar' && cartCount > 0 && (
-              <span className="header-badge">{doneCount}/{cartCount}</span>
-            )}
-            {mode === 'pedir' && (
-              <button
-                className={`save-btn ${cartCount === 0 ? 'disabled' : ''} ${saved ? 'saved' : ''}`}
-                onClick={handleSave}
-                disabled={cartCount === 0}
-                title="Guardar lista"
-              >
-                {saved ? '✓' : '💾'}
-              </button>
-            )}
-          </div>
+          {mode === 'comprar' && cartCount > 0 && (
+            <span className="header-badge">{doneCount}/{cartCount}</span>
+          )}
         </div>
         <div className="mode-toggle">
           <button
@@ -94,6 +83,17 @@ export default function App() {
         )}
       </div>
 
+      {/* Botón guardar flotante — solo en modo pedir y con productos */}
+      {mode === 'pedir' && cartCount > 0 && (
+        <button
+          className={`fab-save ${saved ? 'saved' : ''}`}
+          onClick={handleSave}
+        >
+          {saved ? '✓ ¡Lista guardada!' : `💾 Guardar Lista (${cartCount})`}
+        </button>
+      )}
+
+      {/* Frase financiera siempre abajo de todo */}
       <FinancialTicker />
 
       {showCreate && (
