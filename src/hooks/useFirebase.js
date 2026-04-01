@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { 
   collection, doc, onSnapshot, 
-  setDoc, deleteDoc, writeBatch, getDocs 
+  setDoc, deleteDoc, writeBatch, query, orderBy 
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
@@ -9,11 +9,8 @@ import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
 const LIST_COL      = 'lista'
 const PRODUCTS_COL  = 'productos'
 
-// Inicializa productos por defecto si la base está vacía 
-async function initProducts() {
-  const snap = await getDocs(collection(db, PRODUCTS_COL))
-  if (!snap.empty) return
-  
+// Función interna para poblar la base si está vacía (ahora más rápida)
+async function seedDatabase() {
   const batch = writeBatch(db)
   CATEGORIES.forEach(cat => {
     const prods = DEFAULT_PRODUCTS[cat.id] || []
@@ -32,8 +29,14 @@ export function useProducts() {
   const [loadingProducts, setLoadingProducts] = useState(true)
 
   useEffect(() => {
-    initProducts().then(() => {
-      const unsub = onSnapshot(collection(db, PRODUCTS_COL), snap => {
+    // Optimizamos: Iniciamos el listener de inmediato sin esperar a initProducts
+    const q = query(collection(db, PRODUCTS_COL), orderBy('createdAt', 'asc'))
+    
+    const unsub = onSnapshot(q, (snap) => {
+      if (snap.empty) {
+        // Si no hay nada, inicializamos en segundo plano
+        seedDatabase()
+      } else {
         const data = {}
         snap.forEach(d => {
           const p = { ...d.data(), id: d.id }
@@ -43,9 +46,13 @@ export function useProducts() {
         })
         setProducts(data)
         setLoadingProducts(false)
-      })
-      return unsub
+      }
+    }, (error) => {
+      console.error("Error cargando productos:", error)
+      setLoadingProducts(false)
     })
+
+    return unsub
   }, [])
 
   const saveProduct = async (product) => {
@@ -68,23 +75,23 @@ export function useShoppingList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, LIST_COL), snap => {
+    // Listener directo para la lista de compras
+    const unsub = onSnapshot(collection(db, LIST_COL), (snap) => {
       const data = {}
       snap.forEach(d => { data[d.id] = d.data() })
       setItems(data)
+      setLoading(false)
+    }, (error) => {
+      console.error("Error cargando lista:", error)
       setLoading(false)
     })
     return unsub
   }, [])
 
-  // Guarda todos los productos seleccionados en un solo proceso (Batch) 
   const saveAllPending = async (pendingItems) => {
     const batch = writeBatch(db)
-    
     for (const [key, item] of Object.entries(pendingItems)) {
       const existing = items[key]
-      
-      // Si el producto ya estaba en la lista, sumamos las cantidades 
       if (existing && (existing.confirmedQty || 0) > 0) {
         batch.set(doc(db, LIST_COL, key), {
           ...existing,
@@ -93,7 +100,6 @@ export function useShoppingList() {
           done: false,
         }, { merge: true })
       } else {
-        // Si es nuevo, lo creamos desde cero 
         batch.set(doc(db, LIST_COL, key), {
           ...item,
           confirmedQty: item.pendingQty,
