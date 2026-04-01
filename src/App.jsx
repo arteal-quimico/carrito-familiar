@@ -90,13 +90,19 @@ export default function App() {
             <p>Cargando lista...</p>
           </div>
         ) : mode === 'pedir' ? (
-          <PedirView
-            products={allProducts}
-            items={items}
-            addItem={addItem}
-            updateItem={updateItem}
-            onOpenCreate={() => setShowCreate(true)}
-          />
+         <PedirView
+  products={allProducts}
+  items={items}
+  addItem={addItem}
+  updateItem={updateItem}
+  onOpenCreate={() => setShowCreate(true)}
+  onEditProduct={async (updated) => {
+    await addCustomProduct(updated)
+  }}
+  onDeleteProduct={async (product) => {
+    const { deleteCustomProduct } = await import('./hooks/useFirebase')
+  }}
+/>
         ) : (
           <ComprarView
             products={allProducts}
