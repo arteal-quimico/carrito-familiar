@@ -9,7 +9,6 @@ import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
 const LIST_COL      = 'lista'
 const PRODUCTS_COL  = 'productos'
 
-// Función interna para poblar la base si está vacía (ahora más rápida)
 async function seedDatabase() {
   const batch = writeBatch(db)
   CATEGORIES.forEach(cat => {
@@ -29,13 +28,14 @@ export function useProducts() {
   const [loadingProducts, setLoadingProducts] = useState(true)
 
   useEffect(() => {
-    // Optimizamos: Iniciamos el listener de inmediato sin esperar a initProducts
     const q = query(collection(db, PRODUCTS_COL), orderBy('createdAt', 'asc'))
     
     const unsub = onSnapshot(q, (snap) => {
       if (snap.empty) {
-        // Si no hay nada, inicializamos en segundo plano
+        // Si está vacío, poblamos la base
         seedDatabase()
+        // IMPORTANTE: Quitamos el loading para que no se quede en blanco
+        setLoadingProducts(false) 
       } else {
         const data = {}
         snap.forEach(d => {
@@ -48,7 +48,7 @@ export function useProducts() {
         setLoadingProducts(false)
       }
     }, (error) => {
-      console.error("Error cargando productos:", error)
+      console.error("Error en Firebase:", error)
       setLoadingProducts(false)
     })
 
@@ -75,14 +75,12 @@ export function useShoppingList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Listener directo para la lista de compras
     const unsub = onSnapshot(collection(db, LIST_COL), (snap) => {
       const data = {}
       snap.forEach(d => { data[d.id] = d.data() })
       setItems(data)
       setLoading(false)
     }, (error) => {
-      console.error("Error cargando lista:", error)
       setLoading(false)
     })
     return unsub
@@ -91,23 +89,14 @@ export function useShoppingList() {
   const saveAllPending = async (pendingItems) => {
     const batch = writeBatch(db)
     for (const [key, item] of Object.entries(pendingItems)) {
-      const existing = items[key]
-      if (existing && (existing.confirmedQty || 0) > 0) {
-        batch.set(doc(db, LIST_COL, key), {
-          ...existing,
-          confirmedQty: (existing.confirmedQty || 0) + item.pendingQty,
-          pendingQty: 0,
-          done: false,
-        }, { merge: true })
-      } else {
-        batch.set(doc(db, LIST_COL, key), {
-          ...item,
-          confirmedQty: item.pendingQty,
-          pendingQty: 0,
-          done: false,
-          addedAt: Date.now(),
-        })
-      }
+      const docRef = doc(db, LIST_COL, key)
+      batch.set(docRef, {
+        ...item,
+        confirmedQty: (items[key]?.confirmedQty || 0) + item.pendingQty,
+        pendingQty: 0,
+        done: false,
+        addedAt: Date.now(),
+      }, { merge: true })
     }
     await batch.commit()
   }
