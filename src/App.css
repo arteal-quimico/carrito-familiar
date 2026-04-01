@@ -525,26 +525,31 @@ html, body, #root {
   font-family: 'Nunito', sans-serif;
 }
 
-/* ── Save Button ──────────────────────────────── */
-.save-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.2);
+/* ── FAB Guardar ──────────────────────────────── */
+.fab-save {
+  position: fixed;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 398px;
+  background: var(--green);
   color: white;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-.save-btn:active { transform: scale(0.9); }
-.save-btn.disabled { opacity: 0.35; cursor: default; }
-.save-btn.saved {
-  background: white;
-  color: var(--green);
-  font-size: 18px;
+  border: none;
+  border-radius: 28px;
+  padding: 18px 24px;
+  font-size: 17px;
+  font-family: 'Nunito', sans-serif;
   font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(56,142,60,0.4);
+  z-index: 7;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.fab-save:active { transform: translateX(-50%) scale(0.97); }
+
+.fab-save.saved {
+  background: #2E7D32;
 }
