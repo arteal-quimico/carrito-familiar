@@ -1,77 +1,39 @@
 import { useState, useEffect } from 'react'
-import {
-  collection, doc, onSnapshot,
-  setDoc, deleteDoc, writeBatch, getDocs
-} from 'firebase/firestore'
+import { collection, doc, onSnapshot, setDoc, deleteDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
-import { DEFAULT_PRODUCTS, CATEGORIES } from '../data/products'
 
-const LIST_COL     = 'lista'
-const PRODUCTS_COL = 'productos'
+const LIST_COL   = 'lista'
+const CUSTOM_COL = 'custom_productos'
 
-async function initProductsOnce() {
-  if (localStorage.getItem('products_init')) return
-  const snap = await getDocs(collection(db, PRODUCTS_COL))
-  if (!snap.empty) {
-    localStorage.setItem('products_init', '1')
-    return
-  }
-  const batch = writeBatch(db)
-  CATEGORIES.forEach(cat => {
-    ;(DEFAULT_PRODUCTS[cat.id] || []).forEach(p => {
-      const id = `${cat.id}_${p.id}`
-      batch.set(doc(db, PRODUCTS_COL, id), {
-        ...p, id, category: cat.id, custom: false
-      })
-    })
-  })
-  await batch.commit()
-  localStorage.setItem('products_init', '1')
-}
-
-export function useProducts() {
-  const [products, setProducts]       = useState({})
-  const [loadingProducts, setLoading] = useState(true)
+export function useCustomProducts() {
+  const [customProducts, setCustomProducts] = useState({})
 
   useEffect(() => {
-    // Timeout — si Firebase tarda más de 1.5s muestra igual
-    const timeout = setTimeout(() => setLoading(false), 1500)
-
-    initProductsOnce().then(() => {
-      const unsub = onSnapshot(
-        collection(db, PRODUCTS_COL),
-        snap => {
-          clearTimeout(timeout)
-          const data = {}
-          snap.forEach(d => {
-            const p = { ...d.data(), id: d.id }
-            if (!data[p.category]) data[p.category] = []
-            data[p.category].push(p)
-          })
-          setProducts(data)
-          setLoading(false)
-        },
-        () => {
-          clearTimeout(timeout)
-          setLoading(false)
-        }
-      )
-      return unsub
-    })
-
-    return () => clearTimeout(timeout)
+    const unsub = onSnapshot(collection(db, CUSTOM_COL),
+      snap => {
+        const data = {}
+        snap.forEach(d => {
+          const p = { ...d.data(), id: d.id }
+          if (!data[p.category]) data[p.category] = []
+          data[p.category].push(p)
+        })
+        setCustomProducts(data)
+      },
+      () => {}
+    )
+    return unsub
   }, [])
 
   const saveProduct = async (product) => {
     const id = product.id || `${product.category}_custom_${Date.now()}`
-    await setDoc(doc(db, PRODUCTS_COL, id), { ...product, id })
+    await setDoc(doc(db, CUSTOM_COL, id), { ...product, id })
   }
 
   const deleteProduct = async (productId) => {
-    await deleteDoc(doc(db, PRODUCTS_COL, productId))
+    await deleteDoc(doc(db, CUSTOM_COL, productId))
   }
 
-  return { products, loadingProducts, saveProduct, deleteProduct }
+  return { customProducts, saveProduct, deleteProduct }
 }
 
 export function useShoppingList() {
@@ -89,10 +51,7 @@ export function useShoppingList() {
         setItems(data)
         setLoading(false)
       },
-      () => {
-        clearTimeout(timeout)
-        setLoading(false)
-      }
+      () => { clearTimeout(timeout); setLoading(false) }
     )
     return () => { clearTimeout(timeout); unsub() }
   }, [])
