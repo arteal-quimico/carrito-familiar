@@ -616,4 +616,25 @@ html, body, #root {
   background: #FFEBEE;
   border-color: #E53935;
 }
+/* ── Edit Button ──────────────────────────────── */
+.edit-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
 
+.product-card {
+  position: relative;
+}
