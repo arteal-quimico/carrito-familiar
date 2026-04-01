@@ -553,3 +553,67 @@ html, body, #root {
 .fab-save.saved {
   background: #2E7D32;
 }
+/* ── Emoji Gallery ────────────────────────────── */
+.emoji-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.emoji-tab {
+  flex: 1;
+  padding: 8px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 10px;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  cursor: pointer;
+}
+
+.emoji-tab.active {
+  border-color: var(--green-light);
+  background: var(--green-pale);
+  color: var(--green-text);
+}
+
+.emoji-gallery {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.emoji-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 8px 0 4px;
+}
+
+/* ── Delete Button ────────────────────────────── */
+.btn-delete {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1.5px solid #FFCDD2;
+  border-radius: 10px;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #E53935;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-delete.confirm {
+  background: #FFEBEE;
+  border-color: #E53935;
+}
+
