@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
 import {
   collection, doc, onSnapshot,
-  setDoc, deleteDoc, writeBatch, getDocs
+  setDoc, deleteDoc, writeBatch
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
 const LIST_COL = 'lista'
 const PRODUCTS_COL = 'productos_custom'
 
-// ── Lista de compras en tiempo real ──────────────────────────
 export function useShoppingList() {
   const [items, setItems] = useState({})
   const [loading, setLoading] = useState(true)
@@ -24,7 +23,13 @@ export function useShoppingList() {
   }, [])
 
   const addItem = async (key, itemData) => {
-    await setDoc(doc(db, LIST_COL, key), { ...itemData, done: false, addedAt: Date.now() })
+    await setDoc(doc(db, LIST_COL, key), {
+      ...itemData,
+      pendingQty: itemData.qty || 0,
+      confirmedQty: 0,
+      done: false,
+      addedAt: Date.now()
+    })
   }
 
   const updateItem = async (key, updates) => {
@@ -52,7 +57,6 @@ export function useShoppingList() {
   return { items, loading, addItem, updateItem, removeItem, toggleDone, clearAll }
 }
 
-// ── Productos personalizados ─────────────────────────────────
 export function useCustomProducts() {
   const [customProducts, setCustomProducts] = useState({})
 
