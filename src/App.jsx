@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useShoppingList, useCustomProducts } from './hooks/useFirebase'
-import { CATEGORIES, DEFAULT_PRODUCTS } from './data/products'
+import { useShoppingList, useProducts } from './hooks/useFirebase'
+import { CATEGORIES } from './data/products'
 import PedirView from './components/PedirView'
 import ComprarView from './components/ComprarView'
 import CreateProductModal from './components/CreateProductModal'
@@ -8,104 +8,75 @@ import FinancialTicker from './components/FinancialTicker'
 import './App.css'
 
 export default function App() {
-  const [mode, setMode] = useState('pedir')
+  const [mode, setMode]             = useState('pedir')
   const [showCreate, setShowCreate] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const { items, loading, addItem, updateItem, removeItem, toggleDone, clearAll } = useShoppingList()
-  const { customProducts, addCustomProduct } = useCustomProducts()
+  const [editProduct, setEditProduct] = useState(null)
+  const [saved, setSaved]           = useState(false)
+  const [pending, setPending]       = useState({})
 
-  const allProducts = {}
-  CATEGORIES.forEach(cat => {
-    allProducts[cat.id] = [
-      ...(DEFAULT_PRODUCTS[cat.id] || []),
-      ...(customProducts[cat.id] || []),
-    ]
-  })
+  const { items, loading, saveAllPending, toggleDone, clearAll } = useShoppingList()
+  const { products, loadingProducts, saveProduct, deleteProduct } = useProducts()
 
-  const cartCount = Object.keys(items).filter(k => (items[k].pendingQty || 0) > 0).length
-  const doneCount = Object.values(items).filter(i => i.done).length
-  const totalCount = Object.keys(items).length
+  const cartCount  = Object.keys(pending).length
+  const doneCount  = Object.values(items).filter(i => i.done).length
+  const totalItems = Object.values(items).filter(i => (i.confirmedQty || 0) > 0).length
 
   const handleSave = async () => {
     if (cartCount === 0) return
-
-    // Por cada producto en el pedido pendiente
-    const pendingKeys = Object.keys(items).filter(k => (items[k].pendingQty || 0) > 0)
-
-    for (const key of pendingKeys) {
-      const item = items[key]
-      const newQty = item.pendingQty || 0
-
-      if (item.confirmedQty > 0) {
-        // Ya existe en lista — sumar cantidad
-        await updateItem(key, {
-          confirmedQty: (item.confirmedQty || 0) + newQty,
-          pendingQty: 0,
-          done: false,
-        })
-      } else {
-        // Nuevo en lista — confirmar
-        await updateItem(key, {
-          confirmedQty: newQty,
-          pendingQty: 0,
-          done: false,
-        })
-      }
-    }
-
+    await saveAllPending(pending)
+    setPending({})
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
+  const handleAddPending = (key, itemData) => {
+    setPending(prev => ({ ...prev, [key]: itemData }))
+  }
+
+  const handleRemovePending = (key) => {
+    setPending(prev => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
   return (
     <div className="app">
-
       <div className="header">
         <div className="header-top">
           <span className="header-title">🛒 Carrito Familiar</span>
-          {mode === 'comprar' && totalCount > 0 && (
-            <span className="header-badge">{doneCount}/{totalCount}</span>
+          {mode === 'comprar' && totalItems > 0 && (
+            <span className="header-badge">{doneCount}/{totalItems}</span>
           )}
         </div>
         <div className="mode-toggle">
-          <button
-            className={`mode-btn ${mode === 'pedir' ? 'active' : ''}`}
-            onClick={() => setMode('pedir')}
-          >
+          <button className={`mode-btn ${mode === 'pedir' ? 'active' : ''}`} onClick={() => setMode('pedir')}>
             📝 Pedir
           </button>
-          <button
-            className={`mode-btn ${mode === 'comprar' ? 'active' : ''}`}
-            onClick={() => setMode('comprar')}
-          >
+          <button className={`mode-btn ${mode === 'comprar' ? 'active' : ''}`} onClick={() => setMode('comprar')}>
             🛒 Comprando
           </button>
         </div>
       </div>
 
       <div className="content">
-        {loading ? (
+        {loading || loadingProducts ? (
           <div className="loading">
             <div className="loading-spinner" />
             <p>Cargando lista...</p>
           </div>
         ) : mode === 'pedir' ? (
-         <PedirView
-  products={allProducts}
-  items={items}
-  addItem={addItem}
-  updateItem={updateItem}
-  onOpenCreate={() => setShowCreate(true)}
-  onEditProduct={async (updated) => {
-    await addCustomProduct(updated)
-  }}
-  onDeleteProduct={async (product) => {
-    const { deleteCustomProduct } = await import('./hooks/useFirebase')
-  }}
-/>
+          <PedirView
+            products={products}
+            pending={pending}
+            onAddPending={handleAddPending}
+            onRemovePending={handleRemovePending}
+            onOpenCreate={() => setShowCreate(true)}
+            onEditProduct={(p) => setEditProduct(p)}
+          />
         ) : (
           <ComprarView
-            products={allProducts}
             items={items}
             toggleDone={toggleDone}
             clearAll={clearAll}
@@ -115,11 +86,8 @@ export default function App() {
       </div>
 
       {mode === 'pedir' && cartCount > 0 && (
-        <button
-          className={`fab-save ${saved ? 'saved' : ''}`}
-          onClick={handleSave}
-        >
-          {saved ? '✓ ¡Lista guardada!' : `💾 Guardar Lista (${cartCount})`}
+        <button className={`fab-save ${saved ? 'saved' : ''}`} onClick={handleSave}>
+          {saved ? '✓ ¡Lista guardada!' : `💾 Guardar Lista (${cartCount} productos)`}
         </button>
       )}
 
@@ -128,7 +96,16 @@ export default function App() {
       {showCreate && (
         <CreateProductModal
           onClose={() => setShowCreate(false)}
-          onSave={addCustomProduct}
+          onSave={saveProduct}
+        />
+      )}
+
+      {editProduct && (
+        <CreateProductModal
+          editProduct={editProduct}
+          onClose={() => setEditProduct(null)}
+          onSave={saveProduct}
+          onDelete={deleteProduct}
         />
       )}
     </div>
